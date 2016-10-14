@@ -1,0 +1,18 @@
+(+ 1 2)
+
+
+(bind-func dsp:DSP
+  (lambda (in:SAMPLE time:i64 channel:i64 data:SAMPLE*)
+    (i64tof ((modulo (+ (bitwise-or time 7) time) 256) ))))
+
+(bind-func dsp:DSP
+  (lambda (in:SAMPLE time:i64 channel:i64 data:SAMPLE*)))
+
+(bind-func dsp
+  (lambda (in:SAMPLE time:i64 chan:i64 data:SAMPLE*)
+    (* .1 (sin (/ (* 2.0 3.1415               ;; 2pi(ish)
+                     440.0                    ;; frequency (Hz)
+                     (i64tof (% time 44100))) ;; time mod samplerate
+                  44100.0)))))
+
+(dsp:set! dsp)
