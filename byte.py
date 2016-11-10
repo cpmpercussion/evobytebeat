@@ -7,7 +7,7 @@ from __future__ import print_function
 from deap import base, creator, gp, tools, algorithms
 import operator
 import numpy as np
-
+import random
 
 def beat(t):
     return  t*(t+(t>>9|t>>13))%40&120
@@ -31,7 +31,7 @@ def playback_char(e,t):
     return (int(e(t+1)) % 256)
 
 def gen_beat_output(e):
-    return [playback_char(e,t) for t in range(1000)]
+    return [playback_char(e,t) for t in range(100)]
 
 """
 Setup the Evolutionary Programming system
@@ -73,11 +73,11 @@ def evalBeat(individual):
     try:
         test_output = gen_beat_output(routine)
     except:
-        return 0
+        return 0.0,
     ## do some stats on the beat
-    sd = np.std(test_output)
+    sd = np.std(np.array(test_output))
     # return the score
-    return sd,
+    return float(sd),
 
 def make_test_output():
     out = []
@@ -113,45 +113,39 @@ def playback_random_beat():
 Setup the GP evolution
 """
 
-creator.create("FitnessMax", base.Fitness, weights = (1.0,))
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
-toolbox.register("expr", gp.genHalfAndHalf, pset=pset, min_=3, max_=10)
-toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr)
+# Attribute generator
+toolbox.register("expr_init", gp.genFull, pset=pset, min_=1, max_=2)
+
+# Structure initializers
+toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr_init)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-toolbox.register("compile", gp.compile, pset=pset)
+
 
 toolbox.register("evaluate", evalBeat)
-toolbox.register("select", tools.selTournament, tournsize=3)
+toolbox.register("select", tools.selTournament, tournsize=7)
 toolbox.register("mate", gp.cxOnePoint)
-toolbox.register("expr_mut", gp.genFull, min_=0, max_=6)
+toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
-
-toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
-
-
 
 def main():
     random.seed(318)
 
-    # Stats for population:
-    stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
-    stats_size = tools.Statistics(len)
-    mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-    mstats.register("avg", np.mean)
-    mstats.register("std", np.std)
-    mstats.register("min", np.min)
-    mstats.register("max", np.max)
+    pop = toolbox.population(n=20)
+    hof = tools.HallOfFame(1)
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean)
+    stats.register("std", np.std)
+    stats.register("min", np.min)
+    stats.register("max", np.max)
 
+    print("Starting EA Simple")
+    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 10, stats, halloffame=hof)
     
-    pop = toolbox.population(n=100)
-    hof = tools.HallOfFame(10)
-    pop, log = algorithms.eaSimple(pop, toolbox, 0.5, 0.1, 20, stats=mstats,
-                                   halloffame=hof, verbose=True)
-    # print log
-    return pop, log, hof
+    return pop, hof, stats
 
 if __name__ == "__main__":
     main()
