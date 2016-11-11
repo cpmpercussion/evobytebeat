@@ -48,11 +48,13 @@ pset.addPrimitive(operator.and_,2)
 pset.addPrimitive(operator.xor,2)
 #pset.addPrimitive(operator.sub,2)
 pset.addPrimitive(operator.floordiv,2)
-#pset.addTerminal(1)
-#pset.addTerminal(2)
-#pset.addTerminal(3)
+pset.addTerminal(1)
+pset.addTerminal(2)
+pset.addTerminal(3)
 pset.addTerminal(5)
 pset.addTerminal(7)
+pset.addTerminal(11)
+pset.addTerminal(13)
 pset.renameArguments(ARG0='t')
 
 def make_random_beat():
@@ -88,13 +90,18 @@ def make_test_output():
         print("failed")
     return out
 
-"""
-blippy, epic: (t*((15&t>>11)%12)&55-(t>>5|t>>12)|t*(t>>10)*32)-1
-atmospheric, hopeful: t*3&(t>>10)|t*12&(t>>10)|t*10&((t>>8)*55)&128
-expansive rumbles: t*4&(t>>10)|t*4&(t*6>>8)&t|64
-electric, repetitive: t*(t+(t>>9|t>>13))%40&120
+def output_beat_to_file(file_name, e):
+    print("Writing to file:", file_name)
+    routine = gp.compile(e,pset)
+    with open(file_name,'w') as f:
+         for t in range(200000):
+             f.write(chr(int(routine(t+1))%256))
 
-"""
+def output_beat_to_std_out(e):
+    routine = gp.compile(e,pset)
+    for t in range(50000):
+        print((chr(int(routine(t+1))%256)), end="")
+
 def playback_random_beat():
     a = ""
     while True:
@@ -132,10 +139,10 @@ toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 
 def main():
-    random.seed(318)
-
+    #random.seed(318)
+    print("Setting up Evolution of BeatBeats!")
     pop = toolbox.population(n=20)
-    hof = tools.HallOfFame(1)
+    hof = tools.HallOfFame(3)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
     stats.register("std", np.std)
@@ -143,8 +150,12 @@ def main():
     stats.register("max", np.max)
 
     print("Starting EA Simple")
-    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 10, stats, halloffame=hof)
-    
+    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 50, stats, halloffame=hof)
+    print("Finished Evolution, now saving hall of fame.")
+    for index, indiv in enumerate(hof.items):
+        output_beat_to_file("best"+str(index)+".raw",indiv)
+        output_beat_to_std_out(indiv)
+    print("Done saving hall of fame.")
     return pop, hof, stats
 
 if __name__ == "__main__":
@@ -153,3 +164,9 @@ if __name__ == "__main__":
 
 
 
+"""
+blippy, epic: (t*((15&t>>11)%12)&55-(t>>5|t>>12)|t*(t>>10)*32)-1
+atmospheric, hopeful: t*3&(t>>10)|t*12&(t>>10)|t*10&((t>>8)*55)&128
+expansive rumbles: t*4&(t>>10)|t*4&(t*6>>8)&t|64
+electric, repetitive: t*(t+(t>>9|t>>13))%40&120
+"""
