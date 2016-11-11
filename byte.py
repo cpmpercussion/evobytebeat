@@ -130,8 +130,7 @@ toolbox.register("expr_init", gp.genFull, pset=pset, min_=1, max_=2)
 # Structure initializers
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr_init)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-
+# toolbox setup
 toolbox.register("evaluate", evalBeat)
 toolbox.register("select", tools.selTournament, tournsize=7)
 toolbox.register("mate", gp.cxOnePoint)
