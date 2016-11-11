@@ -1,5 +1,6 @@
 # evobytebeat
-Evolutionary Bytebeats
+
+Evolutionary Bytebeats - evolving tiny programs to create digital audio!
 
 ## How to bytebeat?
 
