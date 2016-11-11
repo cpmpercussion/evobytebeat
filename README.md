@@ -4,6 +4,9 @@ Evolutionary Bytebeats - evolving tiny programs to create digital audio!
 
 ## How to bytebeat?
 
+0. install some stuff
+  - [deap](https://github.com/deap/deap): `pip install deap`
+  - [sox](http://sox.sourceforge.net): macOS: `brew install sox` ubuntu: `sudo apt-get install sox`
 1. run `./play-python.sh` to evolve and play three bytebeats.
 2. rock out!
 
@@ -15,4 +18,8 @@ Ville-Matias Heikkilä (Viznut) "Discovering novel computer music techniques by 
 
 ## TODO:
 
-Lots!
+lots!
+
+## Examples!
+
+not yet!
