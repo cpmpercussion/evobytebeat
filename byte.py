@@ -63,6 +63,15 @@ def make_random_beat():
     #print(str(tree))
     return gp.compile(tree,pset)
 
+def make_test_output():
+    out = []
+    try:
+        f = make_random_beat()
+        out = gen_beat_output(f)
+    except:
+        print("failed")
+    return out
+
 def make_test_tree():
     expr = gp.genFull(pset, min_=3,max_=10)
     tree = gp.PrimitiveTree(expr)
@@ -81,14 +90,7 @@ def evalBeat(individual):
     # return the score
     return float(sd),
 
-def make_test_output():
-    out = []
-    try:
-        f = make_random_beat()
-        out = gen_beat_output(f)
-    except:
-        print("failed")
-    return out
+
 
 def output_beat_to_file(file_name, e):
     print("Writing to file:", file_name)
@@ -152,8 +154,8 @@ def main():
     algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 50, stats, halloffame=hof)
     print("Finished Evolution, now saving hall of fame.")
     for index, indiv in enumerate(hof.items):
-        output_beat_to_file("best"+str(index)+".raw",indiv)
-        output_beat_to_std_out(indiv)
+        output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
+        #output_beat_to_std_out(indiv)  # output to standard output!
     print("Done saving hall of fame.")
     return pop, hof, stats
 
