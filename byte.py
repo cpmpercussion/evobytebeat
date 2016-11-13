@@ -30,6 +30,7 @@ def playback_expr_count(e):
 def playback_char(e,t):
     return (int(e(t+1)) % 256)
 
+#@profile
 def gen_beat_output(e):
     return [playback_char(e,t) for t in range(100)]
 
@@ -77,6 +78,7 @@ def make_test_tree():
     tree = gp.PrimitiveTree(expr)
     return tree
 
+#@profile
 def evalBeat(individual):
     # compile the individual
     routine = gp.compile(individual, pset)
@@ -87,10 +89,9 @@ def evalBeat(individual):
         return 0.0,
     ## do some stats on the beat
     sd = np.std(np.array(test_output))
+    del test_output
     # return the score
     return float(sd),
-
-
 
 def output_beat_to_file(file_name, e):
     print("Writing to file:", file_name)
@@ -140,7 +141,8 @@ toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 
 def main():
-    #random.seed(318)
+    #random.seed(1024)
+    random.seed(318)
     print("Setting up Evolution of BeatBeats!")
     pop = toolbox.population(n=20)
     hof = tools.HallOfFame(3)
@@ -152,11 +154,11 @@ def main():
 
     print("Starting EA Simple")
     algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 50, stats, halloffame=hof)
-    print("Finished Evolution, now saving hall of fame.")
-    for index, indiv in enumerate(hof.items):
-        output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
+    #print("Finished Evolution, now saving hall of fame.")
+    #for index, indiv in enumerate(hof.items):
+    #    output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
         #output_beat_to_std_out(indiv)  # output to standard output!
-    print("Done saving hall of fame.")
+    #print("Done saving hall of fame.")
     return pop, hof, stats
 
 if __name__ == "__main__":
