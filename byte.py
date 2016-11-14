@@ -7,7 +7,76 @@ from __future__ import print_function
 from deap import base, creator, gp, tools, algorithms
 import operator
 import numpy as np
+from scipy import signal
 import random
+import pywt
+
+
+## MIR
+# simple peak detection
+def peak_detect(data):
+    max_val = np.amax(abs(data)) 
+    peak_ndx = np.where(data==max_val)
+    if len(peak_ndx[0]) == 0: #if nothing found then the max must be negative
+        peak_ndx = np.where(data==-max_val)
+    return peak_ndx
+
+def bpm_detector(data,fs):
+    cA = [] 
+    cD = []
+    correl = []
+    cD_sum = []
+    levels = 4
+    max_decimation = 2**(levels-1);
+    min_ndx = 60./ 220 * (fs/max_decimation)
+    max_ndx = 60./ 40 * (fs/max_decimation)
+    
+    for loop in range(0,levels):
+        cD = []
+        # 1) DWT
+        if loop == 0:
+            [cA,cD] = pywt.dwt(data,'db4');
+            cD_minlen = len(cD)/max_decimation+1;
+            cD_sum = np.zeros(cD_minlen);
+        else:
+            [cA,cD] = pywt.dwt(cA,'db4');
+        # 2) Filter
+        cD = signal.lfilter([0.01],[1 -0.99],cD);
+
+        # 4) Subtractargs.filename out the mean.
+
+        # 5) Decimate for reconstruction later.
+        cD = abs(cD[::(2**(levels-loop-1))]);
+        cD = cD - np.mean(cD);
+        # 6) Recombine the signal before ACF
+        #    essentially, each level I concatenate 
+        #    the detail coefs (i.e. the HPF values)
+        #    to the beginning of the array
+        cD_sum = cD[0:cD_minlen] + cD_sum;
+
+    if [b for b in cA if b != 0.0] == []:
+        return 0.0,0.0 ## no data
+    # adding in the approximate data as well...    
+    cA = signal.lfilter([0.01],[1 -0.99],cA);
+    cA = abs(cA);
+    cA = cA - np.mean(cA);
+    cD_sum = cA[0:cD_minlen] + cD_sum;
+    
+    # ACF
+    correl = np.correlate(cD_sum,cD_sum,'full') 
+    
+    midpoint = len(correl) / 2
+    correl_midpoint_tmp = correl[midpoint:]
+    peak_ndx = peak_detect(correl_midpoint_tmp[min_ndx:max_ndx]);
+    if len(peak_ndx) > 1:
+        return 0.0,0.0 ## no data
+        
+    peak_ndx_adjusted = peak_ndx[0]+min_ndx;
+    bpm = 60./ peak_ndx_adjusted * (fs/max_decimation)
+    #print bpm
+    return bpm,correl
+
+
 
 def beat(t):
     return  t*(t+(t>>9|t>>13))%40&120
@@ -32,7 +101,7 @@ def playback_char(e,t):
 
 #@profile
 def gen_beat_output(e):
-    return [playback_char(e,t) for t in range(100)]
+    return [playback_char(e,t) for t in range(70000)]
 
 """
 Setup the Evolutionary Programming system
@@ -47,7 +116,7 @@ pset.addPrimitive(operator.lshift,2)
 pset.addPrimitive(operator.or_,2)
 pset.addPrimitive(operator.and_,2)
 pset.addPrimitive(operator.xor,2)
-#pset.addPrimitive(operator.sub,2)
+pset.addPrimitive(operator.sub,2)
 pset.addPrimitive(operator.floordiv,2)
 pset.addTerminal(1)
 pset.addTerminal(2)
@@ -74,7 +143,7 @@ def make_test_output():
     return out
 
 def make_test_tree():
-    expr = gp.genFull(pset, min_=3,max_=10)
+    expr = gp.genFull(pset, min_=1,max_=3)
     tree = gp.PrimitiveTree(expr)
     return tree
 
@@ -89,9 +158,10 @@ def evalBeat(individual):
         return 0.0,
     ## do some stats on the beat
     sd = np.std(np.array(test_output))
+    bpm, correl = bpm_detector(test_output,24000)
     del test_output
     # return the score
-    return float(sd),
+    return float(bpm*sd/10000),
 
 def output_beat_to_file(file_name, e):
     print("Writing to file:", file_name)
@@ -128,7 +198,7 @@ creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
 # Attribute generator
-toolbox.register("expr_init", gp.genFull, pset=pset, min_=1, max_=2)
+toolbox.register("expr_init", gp.genFull, pset=pset, min_=1, max_=5)
 
 # Structure initializers
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr_init)
@@ -137,12 +207,12 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("evaluate", evalBeat)
 toolbox.register("select", tools.selTournament, tournsize=7)
 toolbox.register("mate", gp.cxOnePoint)
-toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
+toolbox.register("expr_mut", gp.genFull, min_=0, max_=4)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 
 def main():
     #random.seed(1024)
-    random.seed(318)
+    #random.seed(318)
     print("Setting up Evolution of BeatBeats!")
     pop = toolbox.population(n=20)
     hof = tools.HallOfFame(3)
@@ -153,10 +223,10 @@ def main():
     stats.register("max", np.max)
 
     print("Starting EA Simple")
-    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 50, stats, halloffame=hof)
-    #print("Finished Evolution, now saving hall of fame.")
-    #for index, indiv in enumerate(hof.items):
-    #    output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
+    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 30, stats, halloffame=hof)
+    print("Finished Evolution, now saving hall of fame.")
+    for index, indiv in enumerate(hof.items):
+        output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
         #output_beat_to_std_out(indiv)  # output to standard output!
     #print("Done saving hall of fame.")
     return pop, hof, stats
