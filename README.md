@@ -63,7 +63,7 @@ Here's a good one:
 
 - [Evolved Bytebeat](https://clyp.it/y4i4b4dx)
 
-[!example byte beat](https://github.com/cpmpercussion/evobytebeat/raw/master/bytebeat-example.png)
+![example byte beat](https://github.com/cpmpercussion/evobytebeat/raw/master/bytebeat-example.png)
 
 ## How to bytebeat?
 
