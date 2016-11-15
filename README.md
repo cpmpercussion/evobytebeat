@@ -47,7 +47,7 @@ for convenience. Each bytebeat is also visualised in a plot saved as a
 
 ### Why do this?
 
-First of all, bytebeats sound cool; they have a lo-fi appeal
+First, bytebeats sound cool; they have a lo-fi appeal
 reminiscent of early computer games and experimental noise. The
 bytebeat expressions directly define the output samples in a way that
 makes the computer program feel like a raw creative medium, unlike
@@ -62,6 +62,8 @@ Here's a good one:
 <iframe width="100%" height="160" src="https://clyp.it/y4i4b4dx/widget" frameborder="0"></iframe>
 
 - [Evolved Bytebeat](https://clyp.it/y4i4b4dx)
+
+[!example byte beat](https://github.com/cpmpercussion/evobytebeat/raw/master/bytebeat-example.png)
 
 ## How to bytebeat?
 
