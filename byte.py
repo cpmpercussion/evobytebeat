@@ -203,8 +203,7 @@ def print_image(indiv,name):
     """
     routine = gp.compile(indiv,pset)
     output = gen_beat_output(routine)
-    bits = np.array(map(bitlist,output)[0:24000])
-    #bits = bits.translate()
+    bits = np.array(map(bitlist,output)[0:24000]).transpose()
     plt.style.use('classic')
     plt.imshow(bits,interpolation='nearest',aspect='auto',cmap=plt.get_cmap('Greys'))
     plt.savefig(name+".png",dpi=150)
@@ -248,11 +247,12 @@ def main():
     stats.register("max", np.max)
 
     print("Starting EA Simple")
-    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 10, stats, halloffame=hof)
+    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 100, stats, halloffame=hof)
     print("Finished Evolution, now saving hall of fame.")
     for index, indiv in enumerate(hof.items):
-        output_beat_to_file("best"+str(index),indiv) # output to files!
-        print_image(indiv,"best"+str(index))
+        title = "halloffame-" + str(index)
+        output_beat_to_file(title,indiv) # output to files!
+        print_image(indiv,title)
         #output_beat_to_std_out(indiv)  # output to standard output!
     #print("Done saving hall of fame.")
     return pop, hof, stats
