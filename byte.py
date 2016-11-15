@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 
 ## MIR
 # simple peak detection
+## borrowed from bpm_detection.py
+## https://github.com/scaperot/the-BPM-detector-python
 def peak_detect(data):
     max_val = np.amax(abs(data)) 
     peak_ndx = np.where(data==max_val)
@@ -21,6 +23,8 @@ def peak_detect(data):
         peak_ndx = np.where(data==-max_val)
     return peak_ndx
 
+## borrowed from bpm_detection.py
+## https://github.com/scaperot/the-BPM-detector-python
 def bpm_detector(data,fs):
     cA = [] 
     cD = []
@@ -77,10 +81,6 @@ def bpm_detector(data,fs):
     return bpm,correl
 
 
-
-def beat(t):
-    return  t*(t+(t>>9|t>>13))%40&120
-
 def playback_expr(e):
     t = 1
     while True:
@@ -106,7 +106,6 @@ def gen_beat_output(e):
 """
 Setup the Evolutionary Programming system
 """
-
 def beat_division(a,b):
     if b == 0:
         return 0
@@ -151,16 +150,6 @@ def make_test_tree():
     expr = gp.genFull(pset, min_=1,max_=3)
     tree = gp.PrimitiveTree(expr)
     return tree
-
-def extract_feature(X):
-    sample_rate = 22050
-    stft = np.abs(librosa.stft(X))
-    mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T,axis=0)
-    chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
-    mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
-    contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
-    tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(X), sr=sample_rate).T,axis=0)
-    return mfccs,chroma,mel,contrast,tonnetz
 
 #@profile
 def eval_beat(individual):
@@ -240,10 +229,9 @@ def print_image(indiv,name):
     """
     routine = gp.compile(indiv,pset)
     output = gen_beat_output(routine)
-    output = np.array(map(bitlist,output))
-    output = output.transpose()
-    #plt.style.use('ggplot')
-    plt.imshow(p,interpolation='nearest',aspect='auto',cmap=plt.get_cmap('Greys'))
+    bits = np.array(map(bitlist,output)[0:24000]).translate()
+    plt.style.use('classic')
+    plt.imshow(bits,interpolation='nearest',aspect='auto',cmap=plt.get_cmap('Greys'))
     plt.savefig(name+".png",dpi=150)
 
         
