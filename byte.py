@@ -11,6 +11,7 @@ from scipy import signal
 import random
 import pywt
 import matplotlib.pyplot as plt
+import subprocess
 
 ## MIR
 # simple peak detection
@@ -77,11 +78,12 @@ def bpm_detector(data,fs):
         
     peak_ndx_adjusted = peak_ndx[0]+min_ndx;
     bpm = 60./ peak_ndx_adjusted * (fs/max_decimation)
-    #print bpm
     return bpm,correl
 
-
 def playback_expr(e):
+    """
+    prints the byte beat as chars to standard out forever.
+    """
     t = 1
     while True:
         print(chr(int(
@@ -90,6 +92,9 @@ def playback_expr(e):
         t += 1
 
 def playback_expr_count(e):
+    """
+    Prints the first 50000 chars of bytebeat to standard out.
+    """
     for t in range(50000):
         print(chr(int(
             e(t+1)
@@ -97,16 +102,25 @@ def playback_expr_count(e):
         t += 1
 
 def playback_char(e,t):
+    """
+    Evaluate a bytebeat e at timestep t+1
+    """
     return (int(e(t+1)) % 256)
 
 #@profile
 def gen_beat_output(e):
+    """
+    Returns the first 70000 steps for a bytebeat e
+    """
     return [playback_char(e,t) for t in range(70000)]
 
 """
 Setup the Evolutionary Programming system
 """
 def beat_division(a,b):
+    """
+    Integer division protected that returns 0 for n/0.
+    """
     if b == 0:
         return 0
     return a // b
@@ -131,28 +145,11 @@ pset.addTerminal(11)
 pset.addTerminal(13)
 pset.renameArguments(ARG0='t')
 
-def make_random_beat():
-    expr = gp.genFull(pset, min_=3,max_=10)
-    tree = gp.PrimitiveTree(expr)
-    #print(str(tree))
-    return gp.compile(tree,pset)
-
-def make_test_output():
-    out = []
-    try:
-        f = make_random_beat()
-        out = gen_beat_output(f)
-    except:
-        print("failed")
-    return out
-
-def make_test_tree():
-    expr = gp.genFull(pset, min_=1,max_=3)
-    tree = gp.PrimitiveTree(expr)
-    return tree
-
 #@profile
 def eval_beat(individual):
+    """
+    Evaluation and fitness function used for evolution.
+    """
     # compile the individual
     routine = gp.compile(individual, pset)
     # generate some test output
@@ -169,25 +166,10 @@ def eval_beat(individual):
     # return the score
     return float(bpm_score * sd_score),
 
-def gen_beat_stats(individual):
-    # compile the individual
-    routine = gp.compile(individual, pset)
-    # generate some test output
-    try:
-        test_output = gen_beat_output(routine)
-    except:
-        return 0.0,
-    ## do some stats on the beat
-    sd = np.std(np.array(test_output))
-    bpm, correl = bpm_detector(test_output,24000)
-    bpm_score = 1 - abs((bpm/120.0)-1)
-    sd_score = sd / 128.0
-    del test_output
-    # return the score
-    return float(sd_score),float(bpm_score)
-
-
 def output_beat_to_file(file_name, e):
+    """
+    Output the bytebeat to a file.
+    """
     print("Writing to file:", file_name)
     routine = gp.compile(e,pset)
     with open(file_name,'w') as f:
