@@ -10,7 +10,7 @@ import numpy as np
 from scipy import signal
 import random
 import pywt
-
+import matplotlib.pyplot as plt
 
 ## MIR
 # simple peak detection
@@ -224,6 +224,29 @@ def playback_random_beat():
             a = "other error"
         print(a)
 
+
+"""
+Visualisation
+"""
+def bitlist(n):
+    """
+    Returns a list of bits for a char.
+    """
+    return [n >> i & 1 for i in range(7,-1,-1)]
+
+def print_image(indiv,name):
+    """
+    Prints out a typical bytebeat image from an individual with a given filename.
+    """
+    routine = gp.compile(indiv,pset)
+    output = gen_beat_output(routine)
+    output = np.array(map(bitlist,output))
+    output = output.transpose()
+    #plt.style.use('ggplot')
+    plt.imshow(p,interpolation='nearest',aspect='auto',cmap=plt.get_cmap('Greys'))
+    plt.savefig(name+".png",dpi=150)
+
+        
 """
 Setup the GP evolution
 """
@@ -267,20 +290,10 @@ def main():
     print("Finished Evolution, now saving hall of fame.")
     for index, indiv in enumerate(hof.items):
         output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
+        print_image(indiv,"best"+str(index))
         #output_beat_to_std_out(indiv)  # output to standard output!
     #print("Done saving hall of fame.")
     return pop, hof, stats
 
 if __name__ == "__main__":
     main()
-
-def sigmoid(m,x):
-    return 1 / (1 + np.exp(-x))
-
-
-"""
-blippy, epic: (t*((15&t>>11)%12)&55-(t>>5|t>>12)|t*(t>>10)*32)-1
-atmospheric, hopeful: t*3&(t>>10)|t*12&(t>>10)|t*10&((t>>8)*55)&128
-expansive rumbles: t*4&(t>>10)|t*4&(t*6>>8)&t|64
-electric, repetitive: t*(t+(t>>9|t>>13))%40&120
-"""
