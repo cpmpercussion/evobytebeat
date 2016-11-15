@@ -24,7 +24,6 @@ lots!
 
 Here's one!
 
-<iframe width="100%" height="160"
-src="https://clyp.it/y4i4b4dx/widget" frameborder="0"></iframe>
+<iframe width="100%" height="160" src="https://clyp.it/y4i4b4dx/widget" frameborder="0"></iframe>
 
 - [Evolved Bytebeat](https://clyp.it/y4i4b4dx)
