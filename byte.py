@@ -13,6 +13,9 @@ import pywt
 import matplotlib.pyplot as plt
 import subprocess
 
+SOX_COMMAND = "sox -r 8000 -c 1 -t u8"
+LAME_COMMAND = "lame -V 0"
+
 ## MIR
 # simple peak detection
 ## borrowed from bpm_detection.py
@@ -169,32 +172,21 @@ def eval_beat(individual):
 def output_beat_to_file(file_name, e):
     """
     Output the bytebeat to a file.
+    Converts to wav with sox
     """
     print("Writing to file:", file_name)
     routine = gp.compile(e,pset)
-    with open(file_name,'w') as f:
+    with open(file_name+".raw",'w') as f:
          for t in range(200000):
              f.write(chr(int(routine(t+1))%256))
+    # Now convert to wav
+    subprocess.call(SOX_COMMAND + " " + file_name + ".raw" + " " + file_name + ".wav", shell=True)
+    subprocess.call(LAME_COMMAND + " " + file_name + ".wav", shell=True)
 
 def output_beat_to_std_out(e):
     routine = gp.compile(e,pset)
     for t in range(50000):
         print((chr(int(routine(t+1))%256)), end="")
-
-def playback_random_beat():
-    a = ""
-    while True:
-        try:
-            f = make_random_beat()
-            playback_expr_count(f)
-        except ValueError:
-            a = "Value Error"
-        except ZeroDivisionError:
-            a = "Zero Div Error"
-        except:
-            a = "other error"
-        print(a)
-
 
 """
 Visualisation
@@ -211,7 +203,8 @@ def print_image(indiv,name):
     """
     routine = gp.compile(indiv,pset)
     output = gen_beat_output(routine)
-    bits = np.array(map(bitlist,output)[0:24000]).translate()
+    bits = np.array(map(bitlist,output)[0:24000])
+    #bits = bits.translate()
     plt.style.use('classic')
     plt.imshow(bits,interpolation='nearest',aspect='auto',cmap=plt.get_cmap('Greys'))
     plt.savefig(name+".png",dpi=150)
@@ -220,7 +213,6 @@ def print_image(indiv,name):
 """
 Setup the GP evolution
 """
-
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
@@ -240,13 +232,13 @@ toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 
 def print_pop(p):
     for index, indiv in enumerate(p.items):
-        output_beat_to_filed("individual"+str(index)+".raw",indiv) # output to files.
+        output_beat_to_filed("individual"+str(index),indiv) # output to files.
         # convert to wav?
 
 def main():
     #random.seed(1024)
     #random.seed(318)
-    print("Setting up Evolution of BeatBeats!")
+    print("Setting up Evolution of bytebeats!")
     pop = toolbox.population(n=20)
     hof = tools.HallOfFame(3)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -259,7 +251,7 @@ def main():
     algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 10, stats, halloffame=hof)
     print("Finished Evolution, now saving hall of fame.")
     for index, indiv in enumerate(hof.items):
-        output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
+        output_beat_to_file("best"+str(index),indiv) # output to files!
         print_image(indiv,"best"+str(index))
         #output_beat_to_std_out(indiv)  # output to standard output!
     #print("Done saving hall of fame.")
