@@ -107,17 +107,22 @@ def gen_beat_output(e):
 Setup the Evolutionary Programming system
 """
 
+def beat_division(a,b):
+    if b == 0:
+        return 0
+    return a // b
+
 pset = gp.PrimitiveSet("MAIN", 1)
 pset.addPrimitive(operator.add, 2)
 pset.addPrimitive(operator.mod, 2)
 pset.addPrimitive(operator.mul, 2)
 pset.addPrimitive(operator.rshift,2)
-pset.addPrimitive(operator.lshift,2)
+#pset.addPrimitive(operator.lshift,2)
 pset.addPrimitive(operator.or_,2)
 pset.addPrimitive(operator.and_,2)
 pset.addPrimitive(operator.xor,2)
 pset.addPrimitive(operator.sub,2)
-pset.addPrimitive(operator.floordiv,2)
+pset.addPrimitive(beat_division,2)
 pset.addTerminal(1)
 pset.addTerminal(2)
 pset.addTerminal(3)
@@ -147,8 +152,18 @@ def make_test_tree():
     tree = gp.PrimitiveTree(expr)
     return tree
 
+def extract_feature(X):
+    sample_rate = 22050
+    stft = np.abs(librosa.stft(X))
+    mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T,axis=0)
+    chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
+    mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
+    contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
+    tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(X), sr=sample_rate).T,axis=0)
+    return mfccs,chroma,mel,contrast,tonnetz
+
 #@profile
-def evalBeat(individual):
+def eval_beat(individual):
     # compile the individual
     routine = gp.compile(individual, pset)
     # generate some test output
@@ -159,9 +174,29 @@ def evalBeat(individual):
     ## do some stats on the beat
     sd = np.std(np.array(test_output))
     bpm, correl = bpm_detector(test_output,24000)
+    bpm_score = 1 - abs((bpm/120.0)-1)
+    sd_score = sd / 128.0
     del test_output
     # return the score
-    return float(bpm*sd/10000),
+    return float(bpm_score * sd_score),
+
+def gen_beat_stats(individual):
+    # compile the individual
+    routine = gp.compile(individual, pset)
+    # generate some test output
+    try:
+        test_output = gen_beat_output(routine)
+    except:
+        return 0.0,
+    ## do some stats on the beat
+    sd = np.std(np.array(test_output))
+    bpm, correl = bpm_detector(test_output,24000)
+    bpm_score = 1 - abs((bpm/120.0)-1)
+    sd_score = sd / 128.0
+    del test_output
+    # return the score
+    return float(sd_score),float(bpm_score)
+
 
 def output_beat_to_file(file_name, e):
     print("Writing to file:", file_name)
@@ -198,17 +233,22 @@ creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
 # Attribute generator
-toolbox.register("expr_init", gp.genFull, pset=pset, min_=1, max_=5)
+toolbox.register("expr_init", gp.genFull, pset=pset, min_=0, max_=2)
 
 # Structure initializers
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.expr_init)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 # toolbox setup
-toolbox.register("evaluate", evalBeat)
-toolbox.register("select", tools.selTournament, tournsize=7)
+toolbox.register("evaluate", eval_beat)
+toolbox.register("select", tools.selTournament, tournsize=4)
 toolbox.register("mate", gp.cxOnePoint)
-toolbox.register("expr_mut", gp.genFull, min_=0, max_=4)
+toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
+
+def print_pop(p):
+    for index, indiv in enumerate(p.items):
+        output_beat_to_filed("individual"+str(index)+".raw",indiv) # output to files.
+        # convert to wav?
 
 def main():
     #random.seed(1024)
@@ -223,7 +263,7 @@ def main():
     stats.register("max", np.max)
 
     print("Starting EA Simple")
-    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 30, stats, halloffame=hof)
+    algorithms.eaSimple(pop, toolbox, 0.5, 0.2, 10, stats, halloffame=hof)
     print("Finished Evolution, now saving hall of fame.")
     for index, indiv in enumerate(hof.items):
         output_beat_to_file("best"+str(index)+".raw",indiv) # output to files!
@@ -234,7 +274,8 @@ def main():
 if __name__ == "__main__":
     main()
 
-
+def sigmoid(m,x):
+    return 1 / (1 + np.exp(-x))
 
 
 """
